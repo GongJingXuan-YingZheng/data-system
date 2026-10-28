@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教师端</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <h1>教师端</h1>
+
+  <div id="loginBox">
+    <label>账号</label>
+    <input id="account" placeholder="请输入账号" />
+
+    <label>密码</label>
+    <input id="password" type="password" placeholder="请输入密码" />
+
+    <button id="loginBtn">登录</button>
+    <p id="loginMsg"></p>
+  </div>
+
+  <div id="teacherBox" style="display:none;">
+    <p>学生提交的数据会实时显示在这里</p>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>姓名</th>
+          <th>班级</th>
+          <th>数据一</th>
+          <th>数据二</th>
+          <th>提交时间</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = '12345@';
+const SUPABASE_ANON_KEY = '123456';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const loginBox = document.getElementById('loginBox');
+const teacherBox = document.getElementById('teacherBox');
+const loginBtn = document.getElementById('loginBtn');
+const loginMsg = document.getElementById('loginMsg');
+const tableBody = document.getElementById('tableBody');
+
+loginBtn.addEventListener('click', () => {
+  const account = document.getElementById('account').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if (account === '1234' && password === '123456') {
+    loginBox.style.display = 'none';
+    teacherBox.style.display = 'block';
+    loadSubmissions();
+    subscribeSubmissions();
+  } else {
+    loginMsg.textContent = '账号或密码错误';
+  }
+});
+
+async function loadSubmissions() {
+  const { data, error } = await supabase
+    .from('submissions')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  tableBody.innerHTML = '';
+  data.forEach(addRow);
+}
+
+function subscribeSubmissions() {
+  supabase
+    .channel('submissions')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'submissions' },
+      (payload) => {
+        addRow(payload.new);
+      }
+    )
+    .subscribe();
+}
+
+function addRow(row) {
+  const tr = document.createElement('tr');
+
+  const time = row.created_at
+    ? new Date(row.created_at).toLocaleString()
+    : '';
+
+  tr.innerHTML = `
+    <td>${escapeText(row.name)}</td>
+    <td>${escapeText(row.class || '')}</td>
+    <td>${escapeText(row.data1 || '')}</td>
+    <td>${escapeText(row.data2 || '')}</td>
+    <td>${time}</td>
+  `;
+
+  tableBody.prepend(tr);
+}
+
+function escapeText(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

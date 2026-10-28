@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学生端</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <h1>学生端</h1>
+  <p>请填写你的数据并提交</p>
+
+  <form id="studentForm">
+    <label>姓名</label>
+    <input id="name" placeholder="请输入姓名" required />
+
+    <label>班级</label>
+    <input id="class" placeholder="例如：七年级1班" />
+
+    <label>数据一</label>
+    <input id="data1" placeholder="请输入数据一" required />
+
+    <label>数据二</label>
+    <input id="data2" placeholder="请输入数据二" required />
+
+    <button type="submit">提交数据</button>
+  </form>
+
+  <p id="status"></p>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = '1234';
+const SUPABASE_ANON_KEY = '123456';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const form = document.getElementById('studentForm');
+const status = document.getElementById('status');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const name = document.getElementById('name').value.trim();
+  const className = document.getElementById('class').value.trim();
+  const data1 = document.getElementById('data1').value.trim();
+  const data2 = document.getElementById('data2').value.trim();
+
+  if (!name || !data1 || !data2) {
+    status.textContent = '请至少填写姓名、数据一、数据二';
+    return;
+  }
+
+  status.textContent = '正在提交…';
+
+  const { error } = await supabase.from('submissions').insert([
+    { name, class: className, data1, data2 }
+  ]);
+
+  if (error) {
+    status.textContent = '提交失败：' + error.message;
+  } else {
+    status.textContent = '提交成功';
+    form.reset();
+  }
+});
+</script>
+</body>
+</html>
